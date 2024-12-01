@@ -63,7 +63,7 @@ def get_data():
     # Получение данных из запроса
     data = request.json
     user_prompt = data.get('user_prompt', '')
-    system_prompt = data.get('system_prompt', 'Вы выступаете в роли помощника по государственным услугам. Если контекста и Информации нету, то отвечайте , что не знаете как помочь')
+    system_prompt = data.get('system_prompt', 'Вы выступаете в роли помощника по государственным услугам. Если информации в векторной базе нету , то говори , что не знаешь как помочь')
 
     if not user_prompt:
         return jsonify({"status": "error", "message": "Поле 'user_prompt' обязательно."}), 400
@@ -90,7 +90,7 @@ def get_data():
 Вопрос пользователя:
 "{user_prompt}"
 
-Информация:
+Информация из векторной базы данных:
 """
         for idx, doc in enumerate(relevant_docs, 1):
             prompt += f"{idx}. {doc}\n"
