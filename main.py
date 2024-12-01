@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Import CORS
 import requests
 import os
 import chromadb
@@ -8,6 +9,9 @@ import torch
 import json
 
 app = Flask(__name__)
+
+# Enable CORS for all domains
+CORS(app)  # This will allow CORS for all routes and all origins
 
 # Настройка API ключа и базового URL для Llama API
 API_KEY = 'a413a4be80bb4d198772f1bce5c88bcd'
@@ -129,4 +133,4 @@ def get_data():
 
 if __name__ == '__main__':
     # Запуск приложения Flask
-    app.run(host='0.0.0.0', port=3000, debug=True)
+    app.run(host='0.0.0.0', port=2000, debug=True)
