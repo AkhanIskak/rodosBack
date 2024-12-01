@@ -90,7 +90,7 @@ def get_data():
         if not relevant_docs:
             return jsonify({
                 "status": "error",
-                "message": "Извините, не могу помочь, так как информация не найдена в базе данных."
+                "message": "Sorry , I don't know how to help you"
             }), 404
 
         # Подготовка prompt для Llama только с данными из базы
