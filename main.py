@@ -1,16 +1,17 @@
 from flask import Flask, request, jsonify
-import openai
+import requests
 import os
 import chromadb
 from chromadb.utils import embedding_functions
 from transformers import AutoTokenizer, AutoModel
 import torch
+import json
 
 app = Flask(__name__)
 
 # Настройка API ключа и базового URL для Llama API
-openai.api_key = 'a413a4be80bb4d198772f1bce5c88bcd'
-openai.api_base = "https://api.aimlapi.com/v1"
+API_KEY = 'a413a4be80bb4d198772f1bce5c88bcd'
+API_BASE_URL = "https://api.aimlapi.com"
 
 # Инициализация ChromaDB
 client = chromadb.Client()
@@ -87,23 +88,40 @@ def get_data():
 
 Информация:
 """
-
         for idx, doc in enumerate(relevant_docs, 1):
             prompt += f"{idx}. {doc}\n"
-
         # Вызов Llama API для генерации ответа
-        completion = openai.ChatCompletion.create(
-            model="llama3.1-70b",
-            messages=[
-                {"role": "user", "content": prompt},
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json",
+        }
+
+        payload = {
+            "model": "meta-llama/Meta-Llama-3-70B-Instruct-Lite",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
             ],
-            temperature=0.7,
-            max_tokens=256,
+            "max_tokens": 256,
+            "temperature": 0.7,
+            "stream": False,
+        }
+
+        response = requests.post(
+            url=f"{API_BASE_URL}/chat/completions",
+            headers=headers,
+            data=json.dumps(payload),
         )
 
-        response = completion.choices[0].message.content
+        response.raise_for_status()
+        completion = response.json()
 
-        return jsonify({"response": response}), 200
+        # Получение сгенерированного ответа
+        generated_response = completion['choices'][0]['message']['content']
+
+        return jsonify({"response": completion}), 200
 
     except Exception as e:
         # Обработка ошибок и возврат сообщения об ошибке
