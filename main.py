@@ -26,12 +26,14 @@ collection = client.get_or_create_collection(name=collection_name)
 tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
 model = AutoModel.from_pretrained('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
 
+
 def embed_text(texts):
     inputs = tokenizer(texts, return_tensors='pt', padding=True, truncation=True)
     with torch.no_grad():
         outputs = model(**inputs)
     embeddings = outputs.last_hidden_state.mean(dim=1).numpy()
     return embeddings.tolist()
+
 
 # Эндпоинт для добавления данных
 @app.route('/add_data', methods=['POST'])
@@ -57,13 +59,15 @@ def add_data():
 
     return jsonify({"status": "success", "message": "Данные успешно добавлены в векторную базу данных."}), 200
 
+
 # Эндпоинт для получения данных (генерация ответа с помощью Llama)
 @app.route('/get_data', methods=['POST'])
 def get_data():
     # Получение данных из запроса
     data = request.json
     user_prompt = data.get('user_prompt', '')
-    system_prompt = data.get('system_prompt', 'Вы выступаете в роли помощника по государственным услугам. Если информации в векторной базе нету , то говори , что не знаешь как помочь')
+    system_prompt = data.get('system_prompt',
+                             'Вы выступаете в роли помощника по государственным услугам. Если информации в векторной базе нету, то говорите, что не знаете как помочь.')
 
     if not user_prompt:
         return jsonify({"status": "error", "message": "Поле 'user_prompt' обязательно."}), 400
@@ -82,7 +86,14 @@ def get_data():
         # Получение найденных документов
         relevant_docs = results['documents'][0] if results['documents'] else []
 
-        # Подготовка prompt для Llama
+        # Если нет данных в ChromaDB, возвращаем ответ, что не можем помочь
+        if not relevant_docs:
+            return jsonify({
+                "status": "error",
+                "message": "Извините, не могу помочь, так как информация не найдена в базе данных."
+            }), 404
+
+        # Подготовка prompt для Llama только с данными из базы
         prompt = f"""{system_prompt}
 
 Используя следующую информацию, ответьте на вопрос пользователя максимально подробно и точно.
@@ -94,6 +105,7 @@ def get_data():
 """
         for idx, doc in enumerate(relevant_docs, 1):
             prompt += f"{idx}. {doc}\n"
+
         # Вызов Llama API для генерации ответа
         headers = {
             "Authorization": f"Bearer {API_KEY}",
@@ -125,11 +137,15 @@ def get_data():
         # Получение сгенерированного ответа
         generated_response = completion['choices'][0]['message']['content']
 
-        return jsonify({"response": completion}), 200
+        return jsonify({
+            "status": "success",
+            "response": generated_response
+        }), 200
 
     except Exception as e:
         # Обработка ошибок и возврат сообщения об ошибке
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 if __name__ == '__main__':
     # Запуск приложения Flask
